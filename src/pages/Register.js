@@ -14,6 +14,7 @@ import imgurl from '../assets/images/imgUrl';
 
 import { useSelector, useDispatch } from 'react-redux';
 import { setLoader } from '../redux/actions/userAction'
+import { basicAuthToken } from '../config/appConfig';
 
 const Register = () => {
     const history = useHistory()
