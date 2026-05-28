@@ -1,0 +1,14 @@
+
+*.exe
+node_modules
+www
+build
+platforms
+plugins
+package-lock.json
+debug.log
+
+platforms
+plugins
+
+build.zip

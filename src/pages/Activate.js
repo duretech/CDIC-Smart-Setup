@@ -13,6 +13,7 @@ import imgurl from '../assets/images/imgUrl';
 
 import { useDispatch } from 'react-redux';
 import { setLoader } from '../redux/actions/userAction'
+import { basicAuthToken } from '../config/appConfig';
 
 const Activate = () => {
     const history = useHistory()
@@ -27,7 +28,7 @@ const Activate = () => {
     const onActivationSubmit = values => {
         dispatch(setLoader(true))
         setLoading(true);
-        activate("PASTE_YOUR_AUTH_TOKEN_HERE", values)
+        activate(basicAuthToken, values)
           .then((res) => {
             if(res.status === 200){
               let elem = document.createElement("div");
