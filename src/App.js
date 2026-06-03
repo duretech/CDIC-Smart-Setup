@@ -31,6 +31,7 @@ import DataLog from './pages/datalog/DataLog'
 
 import LandingPage from './pages/LandingPage';
 import RoleManagement from './pages/smartsetuptracker/RoleManagement';
+import toast, { Toaster } from 'react-hot-toast';
 
 function App() {
 
@@ -55,6 +56,11 @@ function App() {
   `;
   return (
     <Router basename="/smartsetupv2">
+      <Toaster
+          containerStyle={{ zIndex: 99999 }}
+          position="bottom-right"
+          reverseOrder={false}
+        />
       <div className="App">
         <DarkBackground disappear={true}>
           <LoadingOverlay

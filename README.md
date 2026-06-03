@@ -72,6 +72,27 @@ String auth = "Basic " + Base64.getEncoder()
 
 ---
 
+# Add below code on dfis.conf file 
+# Custom config for Email Server 
+# smtp/sendgrid {use any one}
+ 
+dure.email.config=smtp 
+dure.email.sendgridkey = {sendgrid key}
+ 
+dure.smtp.port = {smtp port}
+dure.smtp.server = {smtp server}
+dure.smtp.username = {smtp username}
+dure.smtp.password = {smtp password}
+ 
+# For Example
+dure.email.config=smtp 
+dure.email.sendgridkey=sgkey 
+
+dure.smtp.port=443 
+dure.smtp.server=cdic.imonitorplus.com 
+dure.smtp.username=username 
+dure.smtp.password=password
+
 ## 📁 Deployment Folder (basename)
 
 The `basename` defines the deployment folder name.
@@ -118,7 +139,7 @@ https://YOUR_SERVER_URL/cdicv2
 
 ## ✅ Final Checklist
 
-- runtime-config.json updated
+- appconfig.json updated
 - placeholder Base64 key replaced during deployment
 - basename matches folder
 - media folder created

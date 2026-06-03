@@ -26,9 +26,10 @@ import { setProgramDetails } from "../redux/actions/createProgramAction";
 import imgurl from "../assets/images/imgUrl";
 import TextError from "../component/ErrorText";
 import API from "../util";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons"
 import _ from "underscore";
-
+import toast, { Toaster } from 'react-hot-toast';
 import oldformat from "../assets/data/oldFormat.json";
 import newformat from "../assets/data/newFormat.json";
 import axios from "axios";
@@ -48,7 +49,9 @@ const Home = () => {
 
   const handleTutorialClose = () => setShowTutorialModal(false);
 
-  const resetPassword = () => {};
+  const [showPassword, setShowPassword] = useState(false)
+
+  const resetPassword = () => { };
   const resetSchema = Yup.object().shape({
     email: Yup.string().email("Invalid email").required("Username is required"),
   });
@@ -140,18 +143,22 @@ const Home = () => {
       programRuleVariables,
       stageDependentArray = [];
     var attributedependentquestions = [];
+
     API.get(
-      `programRuleVariables?fields=id,displayName,programRuleVariableSourceType,program[id],programStage[id],dataElement[id],trackedEntityAttribute[id],useCodeForOptionSet&paging=false`
+      `programRuleVariables?fields=id,displayName,programRuleVariableSourceType,program[id],programStage[id],dataElement[id,name,description],trackedEntityAttribute[id],useCodeForOptionSet&paging=false`
     ).then((response) => {
       console.log(response.data.programRuleVariables);
       programRuleVariables = response.data.programRuleVariables;
+
       API.get(
         `programRules?filter=program.id:eq:` +
-          programuid +
-          `&filter=name:ne:default&fields=id,displayName,condition,description,program[id],programStage[id],priority,programRuleActions[id,content,location,data,programRuleActionType,programStageSection[id],dataElement[id],trackedEntityAttribute[id],option[id],optionGroup[id],programIndicator[id],programStage[id]]&paging=false`
+        programuid +
+        `&filter=name:ne:default&fields=id,displayName,condition,description,program[id],programStage[id],priority,programRuleActions[id,content,location,data,programRuleActionType,programStageSection[id],dataElement[id],trackedEntityAttribute[id],option[id],optionGroup[id],programIndicator[id],programStage[id]]&paging=false`
       ).then((response) => {
         console.log(response.data.programRules);
         programRules = response.data.programRules;
+
+        // STEP 1: Process dependencies FIRST
         programRuleVariables.map((variable) => {
           if (variable.program.id == programuid) {
             if (
@@ -160,139 +167,162 @@ const Home = () => {
             ) {
               let temp = {};
               temp["dependentdataelementnames"] = [];
-              programRules.map((rule) => {
-                if (
-                  rule.condition &&
-                  rule.condition.includes("!=") &&
-                  rule.condition.match(/\{(.*?)\}/)[1] == variable.displayName
-                ) {
-                  temp["variableName"] = variable.displayName;
-                  temp["dataElementId"] = variable.dataElement.id;
-                  temp["variableId"] = variable.id;
-                  temp["dataelementname"] = variable.displayName.split("_")[1];
-                  temp["ruleId"] = rule.id;
-                  console.log(rule.condition.split("!= ")[1]);
-                  temp["matchingvalue"] = rule.condition
-                    .split("!= ")[1]
-                    .replaceAll("'", "");
-                  temp["stagename"] = _.find(userTemplate.programstages, {
-                    id: variable?.programStage?.id,
-                  })?.name;
-                  let stageIndex = _.findIndex(userTemplate.programstages, {
-                    id: variable?.programStage?.id,
-                  });
-                  let parentIndex = _.findIndex(
-                    userTemplate.programstages[stageIndex]?.dataelements,
-                    { name: temp?.dataelementname }
-                  );
-                  rule.programRuleActions.map((action) => {
-                    if (
-                      _.find(
-                        _.find(userTemplate.programstages, {
-                          id: variable?.programStage?.id,
-                        })?.dataelements,
-                        { dataElementId: action?.dataElement?.id }
-                      )
-                    ) {
-                      let objHolder = {};
-                      objHolder["childdataelementname"] = _.find(
-                        _.find(userTemplate?.programstages, {
-                          id: variable?.programStage?.id,
-                        })?.dataelements,
-                        { dataElementId: action?.dataElement?.id }
-                      )?.name;
-                      objHolder["actionId"] = action.id;
-                      objHolder["dataElementId"] = action?.dataElement?.id;
-                      temp["dependentdataelementnames"].push(objHolder);
+              let hasValidRule = false;
 
-                      let childIndex = _.findIndex(
-                        userTemplate?.programstages[stageIndex]?.dataelements,
-                        { name: objHolder?.childdataelementname }
-                      );
-                      userTemplate.programstages[stageIndex].dataelements[
-                        childIndex
-                      ]["parentQuestion"] = parentIndex;
-                      userTemplate.programstages[stageIndex].dataelements[
-                        childIndex
-                      ]["dependentValue"] = temp.matchingvalue;
-                    }
-                  });
+              programRules.map((rule) => {
+                if (rule.condition && rule.condition.includes("!=")) {
+                  const match = rule.condition.match(/\{(.*?)\}/);
+                  if (match && match[1] == variable.displayName) {
+                    hasValidRule = true;
+                    temp["variableName"] = variable.displayName;
+                    temp["dataElementId"] = variable.dataElement.id;
+                    temp["variableId"] = variable.id;
+                    temp["dataelementname"] = variable?.dataElement?.name.includes("_") ? variable?.dataElement?.name.split("_")[1] : variable?.dataElement?.name; //variable.displayName.split("_")[1] //
+                    temp["ruleId"] = rule.id;
+                    console.log(rule.condition.split("!= ")[1]);
+                    temp["matchingvalue"] = rule.condition
+                      .split("!= ")[1]
+                      .replaceAll("'", "");
+                    temp["stagename"] = _.find(userTemplate.programstages, {
+                      id: variable?.programStage?.id,
+                    })?.name;
+                    let stageIndex = _.findIndex(userTemplate.programstages, {
+                      id: variable?.programStage?.id,
+                    });
+
+                    let parentIndex = _.findIndex(
+                      userTemplate.programstages[stageIndex]?.dataelements,
+                      { dataElementId: variable.dataElement.id }
+                    );
+
+                    rule.programRuleActions.map((action) => {
+                      if (
+                        action?.dataElement?.id &&
+                        _.find(
+                          _.find(userTemplate.programstages, {
+                            id: variable?.programStage?.id,
+                          })?.dataelements,
+                          { dataElementId: action?.dataElement?.id }
+                        )
+                      ) {
+                        let objHolder = {};
+                        objHolder["childdataelementname"] = _.find(
+                          _.find(userTemplate?.programstages, {
+                            id: variable?.programStage?.id,
+                          })?.dataelements,
+                          { dataElementId: action?.dataElement?.id }
+                        )?.name;
+                        objHolder["actionId"] = action.id;
+                        objHolder["dataElementId"] = action?.dataElement?.id;
+                        temp["dependentdataelementnames"].push(objHolder);
+
+                        let childIndex = _.findIndex(
+                          userTemplate?.programstages[stageIndex]?.dataelements,
+                          { dataElementId: action?.dataElement?.id }
+                        );
+
+                        if (childIndex !== -1 && parentIndex !== -1) {
+                          userTemplate.programstages[stageIndex].dataelements[
+                            childIndex
+                          ]["parentQuestion"] = parentIndex;
+                          userTemplate.programstages[stageIndex].dataelements[
+                            childIndex
+                          ]["dependentValue"] = temp.matchingvalue;
+                        }
+                      }
+                    });
+                  }
                 }
               });
-              stageDependentArray.push(temp);
+
+              if (hasValidRule) {
+                stageDependentArray.push(temp);
+              }
             } else if (
               variable.programRuleVariableSourceType == "TEI_ATTRIBUTE"
             ) {
               let temp = {};
               temp["dependentdataelementnames"] = [];
+              let hasValidRule = false;
+
               programRules.map((rule) => {
                 console.log(rule, "rule");
-                if (
-                  rule.condition &&
-                  rule.condition.includes("!=") &&
-                  rule.condition.match(/\{(.*?)\}/)[1] == variable.displayName
-                ) {
-                  temp["variableId"] = variable.id;
-                  temp["dataelementname"] = variable.displayName.split("_")[1];
-                  temp["ruleId"] = rule.id;
-                  console.log(rule.condition.split("!= ")[1]);
-                  temp["matchingvalue"] = rule.condition
-                    .split("!= ")[1]
-                    .replaceAll("'", "");
+                if (rule.condition && rule.condition.includes("!=")) {
+                  const match = rule.condition.match(/\{(.*?)\}/);
+                  if (match && match[1] == variable.displayName) {
+                    hasValidRule = true;
+                    temp["variableId"] = variable.id;
+                    temp["dataelementname"] = variable?.displayName?.includes("_") ? variable?.displayName?.split("_")[1] : variable?.displayName;
+                    temp["ruleId"] = rule.id;
+                    console.log(rule.condition.split("!= ")[1]);
+                    temp["matchingvalue"] = rule.condition
+                      .split("!= ")[1]
+                      .replaceAll("'", "");
 
-                  let parentIndex = _.findIndex(
-                    userTemplate.trackedentityattributes,
-                    { name: temp.dataelementname }
-                  );
-                  rule.programRuleActions.map((action) => {
-                    if (
-                      _.find(userTemplate.trackedentityattributes, {
-                        trackedEntityAttributeId: action.trackedEntityAttribute.id,
-                      })
-                    ) {
-                      let objHolder = {};
-                      objHolder["childdataelementname"] = _.find(
-                        userTemplate.trackedentityattributes,
-                        {
+                    let parentIndex = _.findIndex(
+                      userTemplate.trackedentityattributes,
+                      { trackedEntityAttributeId: variable.trackedEntityAttribute.id }
+                    );
+
+                    rule.programRuleActions.map((action) => {
+                      if (
+                        action?.trackedEntityAttribute?.id &&
+                        _.find(userTemplate.trackedentityattributes, {
                           trackedEntityAttributeId: action.trackedEntityAttribute.id,
-                        }
-                      ).name;
-                      let childIndex = _.findIndex(
-                        userTemplate.trackedentityattributes,
-                        { name: objHolder.childdataelementname }
-                      );
-                      objHolder["actionId"] = action.id;
-                      temp["dependentdataelementnames"].push(objHolder);
+                        })
+                      ) {
+                        let objHolder = {};
+                        objHolder["childdataelementname"] = _.find(
+                          userTemplate.trackedentityattributes,
+                          {
+                            trackedEntityAttributeId: action.trackedEntityAttribute.id,
+                          }
+                        ).name;
 
-                      userTemplate.trackedentityattributes[childIndex][
-                        "parentQuestion"
-                      ] = parentIndex;
-                      userTemplate.trackedentityattributes[childIndex][
-                        "dependentValue"
-                      ] = temp.matchingvalue;
-                    }
-                  });
+                        let childIndex = _.findIndex(
+                          userTemplate.trackedentityattributes,
+                          { trackedEntityAttributeId: action.trackedEntityAttribute.id }
+                        );
+
+                        objHolder["actionId"] = action.id;
+                        temp["dependentdataelementnames"].push(objHolder);
+
+                        if (childIndex !== -1 && parentIndex !== -1) {
+                          userTemplate.trackedentityattributes[childIndex][
+                            "parentQuestion"
+                          ] = parentIndex;
+                          userTemplate.trackedentityattributes[childIndex][
+                            "dependentValue"
+                          ] = temp.matchingvalue;
+                        }
+                      }
+                    });
+                  }
                 }
               });
-              attributedependentquestions.push(temp);
+
+              if (hasValidRule) {
+                attributedependentquestions.push(temp);
+              }
             }
           }
-          // _.find(userTemplate.trackedentityattributes,[])
         });
+
+        // STEP 2: Process checkboxes and MARK option dataElements as hidden
+        const checkboxPromises = [];
+
         userTemplate.programstages.map((stage) => {
-          let tempArray = [];
-          let datelementHolder = stage.dataelements;
           stage.dataelements.map((element) => {
             if (element.type == "boolean") {
-              API.get(
+              const promise = API.get(
                 "dataElementGroups?filter=identifiable:token:" +
-                  element.dhisname +
-                  "&paging=false&fields=id,name,dataElements[id,displayName~rename(code),formName~rename(name)]"
+                element.dhisname +
+                "&paging=false&fields=id,name,dataElements[id,displayName~rename(code),formName~rename(name)]"
               ).then((res) => {
                 if (res.data.dataElementGroups.length > 0 && _.findWhere(res.data.dataElementGroups, { name: element.dhisname })) {
-                  // console.log(res.data.dataElementGroups)
-                  // stage.dataelements
-                  let currentGroup = _.findWhere(res.data.dataElementGroups, { name: element.dhisname })
+                  let currentGroup = _.findWhere(res.data.dataElementGroups, { name: element.dhisname });
+
+                  // Modify parent element
                   element.attributeRefType = "checkbox";
                   element.type = "checkbox";
                   element.groupid = currentGroup.id;
@@ -302,31 +332,56 @@ const Home = () => {
                       return elemgrp.name;
                     }
                   );
+
                   let checkboxvalues = [];
+
+                  // ✅ NEW: Mark all checkbox option dataElements as hidden
                   currentGroup.dataElements.map((el) => {
-                    datelementHolder.map((ell) => {
-                      if (ell.dataElementId == el.id) checkboxvalues.push(ell);
+                    stage.dataelements.map((ell) => {
+                      if (ell.dataElementId == el.id) {
+                        // Mark this as a checkbox option (not a standalone question)
+                        // ell.isCheckboxOption = true;
+                        // ell.parentCheckboxId = element.dataElementId;
+                        // checkboxvalues.push(ell);
+                        checkboxvalues.push({
+                            ...ell,
+                            isCheckboxOption: true,
+                            parentCheckboxId: element.dataElementId,
+                        });
+                      }
                     });
                   });
+
                   console.log(checkboxvalues);
                   element.options = checkboxvalues;
-                  tempArray.push(element);
                 }
+              }).catch(err => {
+                console.error("Error fetching checkbox data:", err);
               });
-            } else {
-              tempArray.push(element);
+
+              checkboxPromises.push(promise);
             }
           });
-          stage.dataelements = tempArray;
         });
-        userTemplate["attributedependentquestions"] =
-          attributedependentquestions;
-        userTemplate["stageDependentArray"] = stageDependentArray;
-        dispatch(setUserTemplate(userTemplate));
-        history.push('/dashboard')
+
+        // STEP 3: Wait for all checkbox processing, then dispatch
+        Promise.all(checkboxPromises).then(() => {
+          userTemplate["attributedependentquestions"] = attributedependentquestions;
+          userTemplate["stageDependentArray"] = stageDependentArray;
+          console.log("userTemplate ", userTemplate)
+          dispatch(setUserTemplate(userTemplate));
+          history.push('/dashboard');
+        }).catch(err => {
+          console.error("Error processing checkboxes:", err);
+          userTemplate["attributedependentquestions"] = attributedependentquestions;
+          userTemplate["stageDependentArray"] = stageDependentArray;
+          dispatch(setUserTemplate(userTemplate));
+          history.push('/dashboard');
+        });
       });
     });
   };
+
   const loginSubmit = (values) => {
     dispatch(setLoader(true));
     const Authorization =
@@ -444,8 +499,14 @@ const Home = () => {
     // console.log(newformat, "postupdate");
 
     // TEMP CODE END
-    
 
+    //   let instance = axios.create({
+    //     headers: {
+    //       get: {        // can be common or any other method
+    //         "Authorization": "Basic " + btoa("lrmis_admin" + ":" + "Test@123")
+    //       }
+    //     }
+    //   })
 
     //   let temp = {}
     //   instance.get("https://lrmis.imonitorplus.com/service/api/dataSets/zvHu42EdDI6?fields=dataSetElements[id,dataSet[id],dataElement[id,displayName,categoryCombo[id,displayName]]").then(res => {
@@ -494,13 +555,18 @@ const Home = () => {
     // console.log(newformat,"updated json")
     // console.log("==========Temp ENd==============")
     console.log("==========Loading APP==============");
-    localStorage.removeItem("persist:root");
-    sessionStorage.clear();
-    localStorage.clear();
+    // localStorage.removeItem("persist:root");
+    // sessionStorage.clear();
+    // localStorage.clear();
     dispatch(setLoader(false));
   }, []);
   return (
     <div>
+      <Toaster
+        containerStyle={{ zIndex: 99999 }}
+        position="bottom-right"
+        reverseOrder={false}
+      />
       <div>
         <Navbar className="navbg" expand="lg">
           <Navbar.Brand href="#home">
@@ -617,31 +683,48 @@ const Home = () => {
 
                       <Form.Group controlId="formBasicPassword">
                         <Field name="password">
-                          {({ field, meta }) => {
-                            return (
-                              <>
-                                <Form.Label className="label">
-                                  Password
-                                </Form.Label>
-                                <div className="formgroup">
-                                  <span className="input-group-addon">
-                                    <i className="fas fa-fingerprint"></i>
-                                  </span>
-                                  <span className="formInput">
-                                    <input
-                                      type="password"
-                                      className="form-control"
-                                      {...field}
-                                    />
-                                  </span>
-                                </div>
-                              </>
-                            );
-                          }}
+                          {({ field, meta }) => (
+                            <>
+                              <Form.Label className="label">Password</Form.Label>
+
+                              <div className="formgroup" style={{ display: "flex", alignItems: "center" }}>
+                                <span className="input-group-addon">
+                                  <i className="fas fa-fingerprint" />
+                                </span>
+
+                                <span className="formInput" style={{ position: "relative", flex: 1 }}>
+                                  <input
+                                    type={showPassword ? "text" : "password"}
+                                    className="form-control"
+                                    {...field}
+                                    style={{ paddingRight: 36 }} // space for eye icon
+                                  />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowPassword(v => !v)}
+                                    aria-label={showPassword ? "Show password" : "Hide password"}
+                                    style={{
+                                      position: "absolute",
+                                      right: 8,
+                                      top: "50%",
+                                      transform: "translateY(-50%)",
+                                      border: "none",
+                                      background: "transparent",
+                                      padding: 0,
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
+                                  </button>
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </Field>
+
                         <ErrorMessage component={TextError} name="password" />
                       </Form.Group>
-
                       <Button
                         className="loginBtn text-white"
                         variant="primary"

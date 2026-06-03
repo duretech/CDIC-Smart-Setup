@@ -117,7 +117,7 @@ const ProgramDetails = () => {
                     description: userTemplate.description == 'null' ? "" : userTemplate.description,
                     disclaimer: userTemplate.disclaimer == 'null' ? "" : userTemplate.disclaimer,
                     languages: userTemplate.selectedlanguage,
-                    country: store.user.isEdit ? store.user.userDetails.organisationUnits[0].name : (store?.programDetails?.details?.country ? store.programDetails.details.country : "")
+                    country: store.user.isEdit ? store?.programDetails?.userTemplate?.countries[0] : (store?.programDetails?.details?.country ? store.programDetails.details.country : "")
                 }}
                 validationSchema={ProgramDetailsSchema}
                 onSubmit={values => {

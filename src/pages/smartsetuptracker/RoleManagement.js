@@ -181,8 +181,8 @@ const RoleManagement = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [menuAccess, setMenuAccess] = useState({});
   const [menuTableData, setMenuTableData] = useState([]);
-const [addNewClientMenuName, setAddNewClientMenuName] = useState('Add New Patient'); // Adjust this name as needed
-const [tableKey, setTableKey] = useState(0);
+  const [addNewClientMenuName, setAddNewClientMenuName] = useState('Add New Patient'); // Adjust this name as needed
+  const [tableKey, setTableKey] = useState(0);
 
   // Validation and loading states
   const [roleNameError, setRoleNameError] = useState("");
@@ -212,33 +212,33 @@ const [tableKey, setTableKey] = useState(0);
   };
 
   // Add this useEffect to automatically disable stages when Add New Client is unchecked
-useEffect(() => {
-  roles.forEach(roleObject => {
-    const roleName = roleObject.displayName;
-    const isAddNewClientEnabled = menuAccess[addNewClientMenuName]?.[roleName];
-    
-    if (!isAddNewClientEnabled) {
-      // Disable all stages for this role
-      setUserAccess(prev => {
-        const updated = { ...prev };
-        if (!updated[roleName]) updated[roleName] = {};
-        userTemplate?.programstages?.forEach(stage => {
-          updated[roleName][stage.keyname] = false;
+  useEffect(() => {
+    roles.forEach(roleObject => {
+      const roleName = roleObject.displayName;
+      const isAddNewClientEnabled = menuAccess[addNewClientMenuName]?.[roleName];
+
+      if (!isAddNewClientEnabled) {
+        // Disable all stages for this role
+        setUserAccess(prev => {
+          const updated = { ...prev };
+          if (!updated[roleName]) updated[roleName] = {};
+          userTemplate?.programstages?.forEach(stage => {
+            updated[roleName][stage.keyname] = false;
+          });
+          return updated;
         });
-        return updated;
-      });
-      
-      setStageAccess(prev => {
-        const updated = { ...prev };
-        userTemplate?.programstages?.forEach(stage => {
-          if (!updated[stage.keyname]) updated[stage.keyname] = {};
-          updated[stage.keyname][roleName] = false;
+
+        setStageAccess(prev => {
+          const updated = { ...prev };
+          userTemplate?.programstages?.forEach(stage => {
+            if (!updated[stage.keyname]) updated[stage.keyname] = {};
+            updated[stage.keyname][roleName] = false;
+          });
+          return updated;
         });
-        return updated;
-      });
-    }
-  });
-}, [menuAccess[addNewClientMenuName]]);
+      }
+    });
+  }, [menuAccess[addNewClientMenuName]]);
 
   // useEffect(() => {
 
@@ -557,20 +557,27 @@ useEffect(() => {
       }
     }
   }, [userGroups, userRoles, storeState.user.isEdit, userTemplate]);
+  // Filter function to exclude patient roles
+  const filterNonPatientRoles = (rolesList) => {
+    return rolesList.filter(role => {
+      const roleName = typeof role === 'object' ? role.displayName : role;
+      return !roleName.trim().toLowerCase().includes('patient');
+    });
+  };
 
   // Select All / Deselect All for Program Stages per role
   const handleStageSelectAll = (roleName) => {
+    console.log("menuAccess ",menuAccess,roleName,addNewClientMenuName)
+    const isAddNewClientEnabled = menuAccess[addNewClientMenuName]?.[roleName];
 
-      const isAddNewClientEnabled = menuAccess[addNewClientMenuName]?.[roleName];
-  
-  if (!isAddNewClientEnabled) {
-    Swal.fire({
-      title: "Access Restricted",
-      text: `"Add New Patient" must be enabled for ${roleName} before selecting program stages.`,
-      icon: "warning"
-    });
-    return;
-  }
+    if (!isAddNewClientEnabled) {
+      Swal.fire({
+        title: "Access Restricted",
+        text: `"Add New Patient" must be enabled for ${roleName} before selecting program stages.`,
+        icon: "warning"
+      });
+      return;
+    }
     const allStagesSelected = userTemplate.programstages.every(stage =>
       userAccess[roleName] && userAccess[roleName][stage.keyname]
     );
@@ -878,101 +885,101 @@ useEffect(() => {
   };
 
 
-const handleCheckboxChange = (stageKey, role) => {
-  // CRITICAL: Check if "Add New Client" is enabled for this role FIRST
-  const isAddNewClientEnabled = menuAccess[addNewClientMenuName]?.[role];
-  
-  if (!isAddNewClientEnabled) {
-    // Show warning and prevent stage selection
-    Swal.fire({
-      title: "Access Restricted",
-      text: `"Add New Patient" menu item must be enabled for ${role} before selecting program stages.`,
-      icon: "warning",
-      confirmButtonText: "OK"
-    });
-    return; // BLOCK stage selection
-  }
+  const handleCheckboxChange = (stageKey, role) => {
+    // CRITICAL: Check if "Add New Client" is enabled for this role FIRST
+    const isAddNewClientEnabled = menuAccess[addNewClientMenuName]?.[role];
 
-  // Original logic continues only if Add New Client is enabled
-  const roleObject = roles.find(r =>
-    (typeof r === 'object' ? r.displayName : r) === role
-  );
+    if (!isAddNewClientEnabled) {
+      // Show warning and prevent stage selection
+      Swal.fire({
+        title: "Access Restricted",
+        text: `"Add New Patient" menu item must be enabled for ${role} before selecting program stages.`,
+        icon: "warning",
+        confirmButtonText: "OK"
+      });
+      return; // BLOCK stage selection
+    }
 
-  const currentUserTemplate = userTemplateRef.current;
-  const updatedUserTemplate = JSON.parse(JSON.stringify(currentUserTemplate));
-
-  if (updatedUserTemplate && updatedUserTemplate.programstages) {
-    const stageIndex = updatedUserTemplate.programstages.findIndex(
-      stage => stage.keyname === stageKey
+    // Original logic continues only if Add New Client is enabled
+    const roleObject = roles.find(r =>
+      (typeof r === 'object' ? r.displayName : r) === role
     );
 
-    if (stageIndex !== -1) {
-      if (!updatedUserTemplate.programstages[stageIndex].userGroupAccesses) {
-        updatedUserTemplate.programstages[stageIndex].userGroupAccesses = [];
-      }
+    const currentUserTemplate = userTemplateRef.current;
+    const updatedUserTemplate = JSON.parse(JSON.stringify(currentUserTemplate));
 
-      const userAccessesArray = updatedUserTemplate.programstages[stageIndex].userGroupAccesses;
-      const userGroupIdToHandle = roleObject?.userGroupId || roleObject?.id;
-
-      const existingIndex = userAccessesArray.findIndex(
-        access => access.userGroupUid === userGroupIdToHandle || access.id === userGroupIdToHandle
+    if (updatedUserTemplate && updatedUserTemplate.programstages) {
+      const stageIndex = updatedUserTemplate.programstages.findIndex(
+        stage => stage.keyname === stageKey
       );
 
-      const currentValue = existingIndex !== -1;
-      const newValue = !currentValue;
-
-      console.log(`🔧 ${newValue ? 'Adding' : 'Removing'} access for ${role} in stage ${stageKey}`);
-
-      if (newValue) {
-        if (existingIndex === -1) {
-          const userAccessObject = {
-            id: userGroupIdToHandle,
-            access: "rw------",
-            userGroupUid: userGroupIdToHandle,
-            displayName: role
-          };
-          updatedUserTemplate.programstages[stageIndex].userGroupAccesses.push(userAccessObject);
+      if (stageIndex !== -1) {
+        if (!updatedUserTemplate.programstages[stageIndex].userGroupAccesses) {
+          updatedUserTemplate.programstages[stageIndex].userGroupAccesses = [];
         }
-      } else {
-        const beforeLength = userAccessesArray.length;
-        updatedUserTemplate.programstages[stageIndex].userGroupAccesses =
-          userAccessesArray.filter(access =>
-            access.userGroupUid !== userGroupIdToHandle && access.id !== userGroupIdToHandle
-          );
-      }
 
-      dispatch(setUserTemplate(updatedUserTemplate));
+        const userAccessesArray = updatedUserTemplate.programstages[stageIndex].userGroupAccesses;
+        const userGroupIdToHandle = roleObject?.userGroupId || roleObject?.id;
 
-      // Update local state
-      setUserAccess(prevUserAccess => {
-        const updatedUserAccess = JSON.parse(JSON.stringify(prevUserAccess));
-        if (!updatedUserAccess[role]) {
-          updatedUserAccess[role] = {};
-        }
-        updatedUserAccess[role][stageKey] = newValue;
-        return updatedUserAccess;
-      });
+        const existingIndex = userAccessesArray.findIndex(
+          access => access.userGroupUid === userGroupIdToHandle || access.id === userGroupIdToHandle
+        );
 
-      setStageAccess(prevStageAccess => {
-        const updatedStageAccess = JSON.parse(JSON.stringify(prevStageAccess));
-        if (!updatedStageAccess[stageKey]) {
-          updatedStageAccess[stageKey] = {};
-        }
-        updatedStageAccess[stageKey][role] = newValue;
-        return updatedStageAccess;
-      });
+        const currentValue = existingIndex !== -1;
+        const newValue = !currentValue;
 
-      setTableDataState(prevTableDataState => {
-        return prevTableDataState.map(row => {
-          if (row.stage === stageKey) {
-            return { ...row, [role]: newValue };
+        console.log(`🔧 ${newValue ? 'Adding' : 'Removing'} access for ${role} in stage ${stageKey}`);
+
+        if (newValue) {
+          if (existingIndex === -1) {
+            const userAccessObject = {
+              id: userGroupIdToHandle,
+              access: "rw------",
+              userGroupUid: userGroupIdToHandle,
+              displayName: role
+            };
+            updatedUserTemplate.programstages[stageIndex].userGroupAccesses.push(userAccessObject);
           }
-          return row;
+        } else {
+          const beforeLength = userAccessesArray.length;
+          updatedUserTemplate.programstages[stageIndex].userGroupAccesses =
+            userAccessesArray.filter(access =>
+              access.userGroupUid !== userGroupIdToHandle && access.id !== userGroupIdToHandle
+            );
+        }
+
+        dispatch(setUserTemplate(updatedUserTemplate));
+
+        // Update local state
+        setUserAccess(prevUserAccess => {
+          const updatedUserAccess = JSON.parse(JSON.stringify(prevUserAccess));
+          if (!updatedUserAccess[role]) {
+            updatedUserAccess[role] = {};
+          }
+          updatedUserAccess[role][stageKey] = newValue;
+          return updatedUserAccess;
         });
-      });
+
+        setStageAccess(prevStageAccess => {
+          const updatedStageAccess = JSON.parse(JSON.stringify(prevStageAccess));
+          if (!updatedStageAccess[stageKey]) {
+            updatedStageAccess[stageKey] = {};
+          }
+          updatedStageAccess[stageKey][role] = newValue;
+          return updatedStageAccess;
+        });
+
+        setTableDataState(prevTableDataState => {
+          return prevTableDataState.map(row => {
+            if (row.stage === stageKey) {
+              return { ...row, [role]: newValue };
+            }
+            return row;
+          });
+        });
+      }
     }
-  }
-};
+  };
 
 
   const truncateRoleName = (roleName, maxLength = 15) => {
@@ -991,164 +998,164 @@ const handleCheckboxChange = (stageKey, role) => {
     );
   };
 
-const columns = [
-  {
-    dataField: "stage",
-    text: "Program Stage",
-    headerStyle: {
-      fontWeight: "bold",
-      minWidth: '200px',
-      textAlign: 'center',
-      verticalAlign: 'middle'
-    },
-    style: { textAlign: 'center', verticalAlign: 'middle', padding: '10px' }
-  },
-  ...roles.map(role => {
-    const roleName = typeof role === 'object' ? role.displayName : role;
-    
-    const allStagesSelected = userTemplate?.programstages?.every(stage =>
-      userAccess[roleName] && userAccess[roleName][stage.keyname]
-    ) || false;
-
-    return {
-      dataField: roleName,
-      text: (
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          padding: '8px 4px'
-        }}>
-          <div style={{
-            marginBottom: '8px',
-            wordWrap: 'break-word',
-            textAlign: 'center',
-            width: '100%'
-          }}>
-            {truncateRoleName(roleName)}
-          </div>
-          <Button
-            size="sm"
-            variant={allStagesSelected ? "danger" : "success"}
-            onClick={() => handleStageSelectAll(roleName)}
-            style={{
-              fontSize: '10px',
-              padding: '4px 8px',
-              whiteSpace: 'nowrap',
-              minWidth: '80px'
-            }}
-          >
-            {allStagesSelected ? "Deselect All" : "Select All"}
-          </Button>
-        </div>
-      ),
-      formatter: (cell, row) => {
-        // ✅ DYNAMIC CHECK - Runs every time a cell renders
-        const isAddNewClientEnabled = menuAccess['Add New Patient']?.[roleName] === true;
-        
-        return (
-          <div style={{
-            textAlign: 'center',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100%',
-            padding: '10px'
-          }}>
-            <input
-              type="checkbox"
-              checked={row[roleName] || false}
-              disabled={!isAddNewClientEnabled}
-              onChange={isAddNewClientEnabled ? () => handleCheckboxChange(row.stage, roleName) : undefined}
-              style={{ 
-                transform: 'scale(1.2)',
-                opacity: isAddNewClientEnabled ? 1 : 0.5,
-                cursor: isAddNewClientEnabled ? 'pointer' : 'not-allowed'
-              }}
-              title={!isAddNewClientEnabled 
-                ? `"Add New Patient" must be enabled for ${roleName} in Menu Management` 
-                : `Toggle ${row.stage} access for ${roleName}`
-              }
-            />
-          </div>
-        );
-      },
+  const columns = [
+    {
+      dataField: "stage",
+      text: "Program Stage",
       headerStyle: {
-        minWidth: '140px',
-        maxWidth: '200px',
+        fontWeight: "bold",
+        minWidth: '200px',
         textAlign: 'center',
-        verticalAlign: 'middle',
-        padding: '8px'
+        verticalAlign: 'middle'
       },
-      style: {
-        textAlign: 'center',
-        verticalAlign: 'middle',
-        padding: '10px',
-        backgroundColor: menuAccess['Add New Patient']?.[roleName] === true ? 'transparent' : '#f8f9fa',
-        opacity: menuAccess['Add New Patient']?.[roleName] === true ? 1 : 0.8
-      }
-    };
-  })
-];
+      style: { textAlign: 'center', verticalAlign: 'middle', padding: '10px' }
+    },
+    ...filterNonPatientRoles(roles).map(role => {
+      const roleName = typeof role === 'object' ? role.displayName : role;
 
+      const allStagesSelected = userTemplate?.programstages?.every(stage =>
+        userAccess[roleName] && userAccess[roleName][stage.keyname]
+      ) || false;
 
+      return {
+        dataField: roleName,
+        text: (
+          <div style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            padding: '8px 4px'
+          }}>
+            <div style={{
+              marginBottom: '8px',
+              wordWrap: 'break-word',
+              textAlign: 'center',
+              width: '100%'
+            }}>
+              {truncateRoleName(roleName)}
+            </div>
+            <Button
+              size="sm"
+              variant={allStagesSelected ? "danger" : "success"}
+              onClick={() => handleStageSelectAll(roleName)}
+              style={{
+                fontSize: '10px',
+                padding: '4px 8px',
+                whiteSpace: 'nowrap',
+                minWidth: '80px'
+              }}
+            >
+              {allStagesSelected ? "Deselect All" : "Select All"}
+            </Button>
+          </div>
+        ),
+        formatter: (cell, row) => {
+          // ✅ DYNAMIC CHECK - Runs every time a cell renders
+          const isAddNewClientEnabled = menuAccess['Add New Patient']?.[roleName] === true;
 
-const handleMenuCheckboxChange = (menuKey, role) => {
-  const currentUserTemplate = userTemplateRef.current;
-  const updatedUserTemplate = JSON.parse(JSON.stringify(currentUserTemplate));
-
-  if (updatedUserTemplate && updatedUserTemplate.roleBasedArray && updatedUserTemplate.roleBasedArray.length > 0) {
-    const roleBasedData = updatedUserTemplate.roleBasedArray[0];
-
-    if (!roleBasedData[role]) {
-      roleBasedData[role] = [];
-    }
-
-    const roleMenuItems = roleBasedData[role];
-    const menuItemIndex = roleMenuItems.findIndex(item => item.name === menuKey);
-
-    if (menuItemIndex !== -1) {
-      const newValue = !roleMenuItems[menuItemIndex].showMenu;
-      roleMenuItems[menuItemIndex].showMenu = newValue;
-    } else {
-      const masterMenuItem = updatedUserTemplate.menuList.find(item => item.name === menuKey);
-      if (masterMenuItem) {
-        roleMenuItems.push({
-          ...masterMenuItem,
-          showMenu: true
-        });
-      }
-    }
-
-    dispatch(setUserTemplate(updatedUserTemplate));
-
-    setMenuAccess(prevMenuAccess => {
-      const updatedMenuAccess = JSON.parse(JSON.stringify(prevMenuAccess));
-      const currentValue = prevMenuAccess[menuKey][role];
-      updatedMenuAccess[menuKey][role] = !currentValue;
-      return updatedMenuAccess;
-    });
-
-    setMenuTableData(prevMenuTableData => {
-      return prevMenuTableData.map(row => {
-        if (row.menuItem === menuKey) {
-          const currentValue = row[role];
-          return { ...row, [role]: !currentValue };
+          return (
+            <div style={{
+              textAlign: 'center',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
+              padding: '10px'
+            }}>
+              <input
+                type="checkbox"
+                checked={row[roleName] || false}
+                disabled={!isAddNewClientEnabled}
+                onChange={isAddNewClientEnabled ? () => handleCheckboxChange(row.stage, roleName) : undefined}
+                style={{
+                  transform: 'scale(1.2)',
+                  opacity: isAddNewClientEnabled ? 1 : 0.5,
+                  cursor: isAddNewClientEnabled ? 'pointer' : 'not-allowed'
+                }}
+                title={!isAddNewClientEnabled
+                  ? `"Add New Patient" must be enabled for ${roleName} in Menu Management`
+                  : `Toggle ${row.stage} access for ${roleName}`
+                }
+              />
+            </div>
+          );
+        },
+        headerStyle: {
+          minWidth: '140px',
+          maxWidth: '200px',
+          textAlign: 'center',
+          verticalAlign: 'middle',
+          padding: '8px'
+        },
+        style: {
+          textAlign: 'center',
+          verticalAlign: 'middle',
+          padding: '10px',
+          backgroundColor: menuAccess['Add New Patient']?.[roleName] === true ? 'transparent' : '#f8f9fa',
+          opacity: menuAccess['Add New Patient']?.[roleName] === true ? 1 : 0.8
         }
-        return row;
+      };
+    })
+  ];
+
+
+
+  const handleMenuCheckboxChange = (menuKey, role) => {
+    const currentUserTemplate = userTemplateRef.current;
+    const updatedUserTemplate = JSON.parse(JSON.stringify(currentUserTemplate));
+
+    if (updatedUserTemplate && updatedUserTemplate.roleBasedArray && updatedUserTemplate.roleBasedArray.length > 0) {
+      const roleBasedData = updatedUserTemplate.roleBasedArray[0];
+
+      if (!roleBasedData[role]) {
+        roleBasedData[role] = [];
+      }
+
+      const roleMenuItems = roleBasedData[role];
+      const menuItemIndex = roleMenuItems.findIndex(item => item.name === menuKey);
+
+      if (menuItemIndex !== -1) {
+        const newValue = !roleMenuItems[menuItemIndex].showMenu;
+        roleMenuItems[menuItemIndex].showMenu = newValue;
+      } else {
+        const masterMenuItem = updatedUserTemplate.menuList.find(item => item.name === menuKey);
+        if (masterMenuItem) {
+          roleMenuItems.push({
+            ...masterMenuItem,
+            showMenu: true
+          });
+        }
+      }
+
+      dispatch(setUserTemplate(updatedUserTemplate));
+
+      setMenuAccess(prevMenuAccess => {
+        const updatedMenuAccess = JSON.parse(JSON.stringify(prevMenuAccess));
+        const currentValue = prevMenuAccess[menuKey][role];
+        updatedMenuAccess[menuKey][role] = !currentValue;
+        return updatedMenuAccess;
       });
-    });
-    
-    // ✅ ADD THESE LINES AT THE END:
-    if (menuKey === 'Add New Client') {
-      console.log(`🚀 "Add New Client" toggled for ${role} - forcing Program Stages refresh`);
-      setTableKey(prev => prev + 1);
+
+      setMenuTableData(prevMenuTableData => {
+        return prevMenuTableData.map(row => {
+          if (row.menuItem === menuKey) {
+            const currentValue = row[role];
+            return { ...row, [role]: !currentValue };
+          }
+          return row;
+        });
+      });
+
+      // ✅ ADD THESE LINES AT THE END:
+      if (menuKey === 'Add New Client') {
+        console.log(`🚀 "Add New Client" toggled for ${role} - forcing Program Stages refresh`);
+        setTableKey(prev => prev + 1);
+      }
     }
-  }
-};
+  };
 
 
   const menuColumns = [
@@ -1244,7 +1251,7 @@ const handleMenuCheckboxChange = (menuKey, role) => {
 
     },
 
-    ...menuRoles.map(role => {
+    ...filterNonPatientRoles(menuRoles).map(role => {
       const roleName = typeof role === 'object' ? role.displayName : role;
 
       const allMenusSelected = menuItems?.every(menuItem =>
@@ -1345,110 +1352,186 @@ const handleMenuCheckboxChange = (menuKey, role) => {
     });
   }
 
-  // =====================================================
-  // Refresh data after API update/publish
-  // =====================================================
-  const refreshDataAfterUpdate = async (orguid) => {
-    try {
-      console.log("🔄 Starting data refresh after update...");
+const refreshDataAfterUpdate = async (orguid) => {
+  try {
+    console.log("Starting data refresh after update...");
 
-      // Reset initialization flags to force re-initialization
-      menuDataInitialized.current = false;
-      stageDataInitialized.current = false;
+    // Reset initialization flags
+    menuDataInitialized.current = false;
+    stageDataInitialized.current = false;
 
-      dispatch(setLoader(true));
+    dispatch(setLoader(true));
 
-      // Fetch fresh data from server
-      const orgId = storeState.user.userDetails.organisationUnits[0].id;
-      const res = await API.get('tracker/smartsetup/get/' + (orguid ? orguid : orgId));
-      getProgramTemplate(res.data);
-      return;
-      console.log("✅ Fresh data received from server");
+    // Fetch fresh data from server
+    const orgId = storeState.user.userDetails.organisationUnits[0].id;
+    const res = await API.get(`tracker/smartsetup/get/${orguid ? orguid : orgId}`);
 
-      // Get program template
-      const freshProgramTemplate = await API.get(`dataStore/template/programtemplate`);
+    // Get program template
+    const freshProgramTemplate = await API.get(`dataStore/template/programtemplate`);
 
-      if (freshProgramTemplate.status === 200 && res.data) {
-        const freshTemplate = { ...freshProgramTemplate.data };
+    if (freshProgramTemplate.status === 200) {
+      const freshTemplate = { ...freshProgramTemplate.data };
 
-        // Map the fresh data including roleBasedArray
-        freshTemplate.programstages = res.data.data.programstages;
-        freshTemplate.trackedentityattributes = res.data.data.trackedentityattributes;
-        freshTemplate["userAccesses"] = res.data.data.userGroupAccesses;
-        freshTemplate["organisationUnits"] = res.data.data.organisationUnits;
+      // Map the fresh data
+      freshTemplate.programstages = res.data.data.programstages;
+      freshTemplate.trackedentityattributes = res.data.data.trackedentityattributes;
+      freshTemplate.userAccesses = res.data.data.userGroupAccesses;
+      freshTemplate.organisationUnits = res.data.data.organisationUnits;
 
-        // Include roleBasedArray from server response
-        if (res.data.programdetails.roleBasedArray) {
-          freshTemplate.roleBasedArray = res.data.programdetails.roleBasedArray;
-        }
-        if (res.data.programdetails.showInQrCard) {
-          freshTemplate.showInQrCard = res.data.programdetails.showInQrCard;
-        }
+      // Include all programdetails fields
+      if (res.data.programdetails.roleBasedArray) {
+        freshTemplate.roleBasedArray = res.data.programdetails.roleBasedArray;
+      }
+      if (res.data.programdetails.showInQrCard) {
+        freshTemplate.showInQrCard = res.data.programdetails.showInQrCard;
+      }
+      freshTemplate.appname = res.data.programdetails.appname;
+      freshTemplate.countries = res.data.programdetails.countries;
+      freshTemplate.description = res.data.programdetails.description;
+      freshTemplate.disclaimer = res.data.programdetails.disclaimer;
+      freshTemplate.logo = res.data.programdetails.logo;
+      freshTemplate.name = res.data.programdetails.name;
+      freshTemplate.programuid = res.data.programdetails.programuid;
+      freshTemplate.selectedlanguage = res.data.programdetails.selectedlanguage;
+      freshTemplate.users = res.data.programdetails.users;
+      freshTemplate.deletedObjects = res.data.programdetails.deletedObjects || {
+        deletedAttribute: [],
+        deletedDataElement: []
+      };
+      freshTemplate.programSections = res.data.data.programSections;
 
-        freshTemplate.appname = res.data.programdetails.appname;
-        freshTemplate.countries = res.data.programdetails.countries;
-        freshTemplate.description = res.data.programdetails.description;
-        freshTemplate.disclaimer = res.data.programdetails.disclaimer;
-        freshTemplate.logo = res.data.programdetails.logo;
-        freshTemplate.name = res.data.programdetails.name;
-        freshTemplate.programuid = res.data.programdetails.programuid;
-        freshTemplate.selectedlanguage = res.data.programdetails.selectedlanguage;
-        freshTemplate['users'] = res.data.programdetails.users;
-        freshTemplate['deletedObjects'] = res.data.programdetails.deletedObjects || {
-          "deletedAttribute": [],
-          "deletedDataElement": []
-        };
-        freshTemplate["programSections"] = res.data.data.programSections;
-
-        // Handle tracked entity attributes
-        let tempTrackHolder = [];
-        if (res.data.data.trackedentityattributes) {
-          res.data.data.trackedentityattributes.forEach(element => {
-            if (element.type == 'boolean') {
-              res.data.data.programSections?.forEach(section => {
+      // ✅ FIX 1: Process TRACKED ENTITY ATTRIBUTES for attributes tab
+      let tempTrackHolder = [];
+      if (res.data.data.trackedentityattributes) {
+        for (const element of res.data.data.trackedentityattributes) {
+          if (element.type == "boolean") {
+            let found = false;
+            if (res.data.data.programSections) {
+              for (const section of res.data.data.programSections) {
                 if (section.name.includes(element.name)) {
-                  element.attributeRefType = 'checkbox';
-                  element.type = 'checkbox';
-                  element.checkboxoption = _.map(section.trackedEntityAttributes,
-                    function (elemgrp) { return elemgrp.name });
+                  element.attributeRefType = "checkbox";
+                  element.type = "checkbox";
+                  element.checkboxoption = _.map(
+                    section.trackedEntityAttributes,
+                    function (elemgrp) {
+                      return elemgrp.name;
+                    }
+                  );
+
                   let checkboxvalues = [];
-                  section.trackedEntityAttributes.forEach(el => {
-                    res.data.data.trackedentityattributes.forEach(ell => {
-                      if (ell.trackedEntityAttributeId == el.id)
-                        checkboxvalues.push(ell);
+                  section.trackedEntityAttributes.forEach((el) => {
+                    res.data.data.trackedentityattributes.forEach((ell) => {
+                      if (ell.trackedEntityAttributeId == el.id) {
+                        // Mark as checkbox option
+                        checkboxvalues.push({ ...ell, isCheckboxOption: true });
+                      }
                     });
                   });
+
                   element.options = checkboxvalues;
                   tempTrackHolder.push(element);
+                  found = true;
+                  break;
                 }
-              });
-            } else {
+              }
+            }
+            if (!found) {
               tempTrackHolder.push(element);
             }
-          });
+          } else {
+            tempTrackHolder.push(element);
+          }
         }
-        freshTemplate.trackedentityattributes = tempTrackHolder;
+      }
+      freshTemplate.trackedentityattributes = tempTrackHolder;
 
-        console.log("🔄 Dispatching fresh userTemplate:");
-        console.log("   Program stages:", freshTemplate.programstages?.length);
-        console.log("   RoleBasedArray:", freshTemplate.roleBasedArray?.length);
+      // ✅ FIX 2: Process PROGRAM STAGES - Use async/await with Promise.all
+      if (freshTemplate.programstages && Array.isArray(freshTemplate.programstages)) {
+        const checkboxPromises = [];
 
-        freshTemplate.programstages?.forEach(stage => {
-          console.log(`   Stage: ${stage.keyname}, userGroupAccesses: ${stage.userGroupAccesses?.length || 0}`);
+        freshTemplate.programstages.forEach((stage) => {
+          if (stage.dataelements && Array.isArray(stage.dataelements)) {
+            stage.dataelements.forEach((element) => {
+              if (element.type == "boolean") {
+                const promise = API.get(
+                  "dataElementGroups?filter=identifiable:token:" +
+                    element.dhisname +
+                    "&paging=false&fields=id,name,dataElements[id,displayName~rename(code),formName~rename(name)]"
+                ).then((groupRes) => {
+                  if (groupRes.data.dataElementGroups.length > 0) {
+                    let currentGroup = _.findWhere(groupRes.data.dataElementGroups, { name: element.dhisname });
+
+                    if (currentGroup) {
+                      // Convert to checkbox parent
+                      element.attributeRefType = "checkbox";
+                      element.type = "checkbox";
+                      element.groupid = currentGroup.id;
+                      element.checkboxoption = _.map(
+                        currentGroup.dataElements,
+                        function (elemgrp) {
+                          return elemgrp.name;
+                        }
+                      );
+
+                      let checkboxvalues = [];
+
+                      // ✅ Mark all checkbox option dataElements as hidden
+                      currentGroup.dataElements.forEach((el) => {
+                        stage.dataelements.forEach((ell) => {
+                          if (ell.dataElementId == el.id) {
+                            // Mark this as a checkbox option (not a standalone question)
+                            // ell.isCheckboxOption = true;
+                            // ell.parentCheckboxId = element.dataElementId;
+                            // checkboxvalues.push(ell);
+                            checkboxvalues.push({
+                                ...ell,
+                                isCheckboxOption: true,
+                                parentCheckboxId: element.dataElementId,
+                            });
+                          }
+                        });
+                      });
+
+                      console.log("Processed checkbox in refresh:", element.dhisname, "with", checkboxvalues.length, "options");
+                      element.options = checkboxvalues;
+                    }
+                  }
+                }).catch(err => {
+                  console.error("Error fetching checkbox for " + element.dhisname, err);
+                });
+
+                checkboxPromises.push(promise);
+              }
+            });
+          }
         });
 
-        // Update Redux with fresh data
-        dispatch(setUserTemplate(freshTemplate));
-
-        console.log("✅ Data refresh completed - stages will re-initialize");
+        // ✅ CRITICAL: Wait for ALL checkbox API calls to complete
+        console.log("Waiting for " + checkboxPromises.length + " checkbox groups to load...");
+        await Promise.all(checkboxPromises);
+        console.log("All checkboxes processed in refresh");
       }
 
+      // ✅ FIX 3: Call getDependency to process stageDependentArray and attributedependentquestions
+      console.log("Calling getDependency to process parent questions...");
+      await getDependency(res.data, freshTemplate);
+      
+      console.log("✅ Data refresh completed - getDependency finished");
+      
+      // ✅ FIX 4: Close the loader (getDependency doesn't close it in this flow)
       dispatch(setLoader(false));
-    } catch (error) {
-      console.error("❌ Error refreshing data:", error);
+      
+    } else {
+      console.error("Failed to fetch program template");
       dispatch(setLoader(false));
     }
-  };
+  } catch (error) {
+    console.error("Error refreshing data:", error);
+    dispatch(setLoader(false));
+    // Still redirect on error
+    dispatch(setActiveTab("step1"));
+  }
+};
 
   // =====================================================
   // NEW: Validation function to check at least one stage per role
@@ -1743,7 +1826,6 @@ const handleMenuCheckboxChange = (menuKey, role) => {
         console.log(`   ${stage.keyname}: ${stage.userGroupAccesses?.length || 0} accesses`, stage.userGroupAccesses);
       });
       console.log("useTemplate > edit", latestUserTemplate);
-      return;
       dispatch(setLoader(true));
       API.post('tracker/smartsetup/edit', latestUserTemplate).then(res => {
         dispatch(setLoader(false));
@@ -1880,163 +1962,217 @@ const handleMenuCheckboxChange = (menuKey, role) => {
     })
   }
 
-  const getDependency = (data, userTemplate) => {
-    console.log(userTemplate);
+  const getDependency = async (data, userTemplate) => {
+    console.log("getDependency called", userTemplate);
     let programuid = data.programdetails.programuid;
     var programRules,
       programRuleVariables,
       stageDependentArray = [];
     var attributedependentquestions = [];
-    API.get(
-      `programRuleVariables?fields=id,displayName,programRuleVariableSourceType,program[id],programStage[id],dataElement[id],trackedEntityAttribute[id],useCodeForOptionSet&paging=false`
-    ).then((response) => {
-      programRuleVariables = response.data.programRuleVariables;
-      API.get(
+
+    try {
+      // Fetch program rule variables
+      const variablesResponse = await API.get(
+        `programRuleVariables?fields=id,displayName,programRuleVariableSourceType,program[id],programStage[id],dataElement[id,name,description],trackedEntityAttribute[id],useCodeForOptionSet&paging=false`
+      );
+      console.log("Fetched program rule variables");
+      programRuleVariables = variablesResponse.data.programRuleVariables;
+
+      // Fetch program rules
+      const rulesResponse = await API.get(
         `programRules?filter=program.id:eq:` +
         programuid +
         `&filter=name:ne:default&fields=id,displayName,condition,description,program[id],programStage[id],priority,programRuleActions[id,content,location,data,programRuleActionType,programStageSection[id],dataElement[id],trackedEntityAttribute[id],option[id],optionGroup[id],programIndicator[id],programStage[id]]&paging=false`
-      ).then((response) => {
-        programRules = response.data.programRules;
-        programRuleVariables.map((variable) => {
-          if (variable.program.id == programuid) {
-            if (
-              variable.programRuleVariableSourceType ==
-              "DATAELEMENT_NEWEST_EVENT_PROGRAM_STAGE"
-            ) {
-              let temp = {};
-              temp["dependentdataelementnames"] = [];
-              programRules.map((rule) => {
-                if (
-                  rule.condition &&
-                  rule.condition.includes("!=") &&
-                  rule.condition.match(/\{(.*?)\}/)[1] == variable.displayName
-                ) {
+      );
+      console.log("Fetched program rules");
+      programRules = rulesResponse.data.programRules;
+
+      // STEP 1: Process dependencies for STAGES
+      programRuleVariables.forEach((variable) => {
+        if (variable.program.id == programuid) {
+          if (
+            variable.programRuleVariableSourceType ==
+            "DATAELEMENT_NEWEST_EVENT_PROGRAM_STAGE"
+          ) {
+            let temp = {};
+            temp["dependentdataelementnames"] = [];
+            let hasValidRule = false;
+
+            programRules.forEach((rule) => {
+              if (rule.condition && rule.condition.includes("!=")) {
+                const match = rule.condition.match(/\{(.*?)\}/);
+                if (match && match[1] == variable.displayName) {
+                  hasValidRule = true;
                   temp["variableName"] = variable.displayName;
                   temp["dataElementId"] = variable.dataElement.id;
                   temp["variableId"] = variable.id;
-                  temp["dataelementname"] = variable.displayName.split("_")[1];
+                  temp["dataelementname"] = variable?.dataElement?.name.includes("_") ? variable?.dataElement?.name.split("_")[1] : variable?.dataElement?.name; //variable.displayName.split("_")[1];
                   temp["ruleId"] = rule.id;
-                  console.log(rule.condition.split("!= ")[1]);
                   temp["matchingvalue"] = rule.condition
                     .split("!= ")[1]
                     .replaceAll("'", "");
-                  temp["stagename"] = _.find(userTemplate.programstages, {
+
+                  const stageFromTemplate = _.find(userTemplate.programstages, {
                     id: variable?.programStage?.id,
-                  })?.name;
+                  });
+                  temp["stagename"] = stageFromTemplate?.name;
+
                   let stageIndex = _.findIndex(userTemplate.programstages, {
                     id: variable?.programStage?.id,
                   });
+
+                  // ✅ FIX: Match by dataElementId, NOT name
                   let parentIndex = _.findIndex(
                     userTemplate.programstages[stageIndex]?.dataelements,
-                    { name: temp?.dataelementname }
+                    { dataElementId: variable.dataElement.id }
                   );
-                  rule.programRuleActions.map((action) => {
+
+                  console.log("Parent lookup:", {
+                    variableName: variable.displayName,
+                    dataElementId: variable.dataElement.id,
+                    stageIndex,
+                    parentIndex,
+                    stageName: temp.stagename
+                  });
+
+                  rule.programRuleActions.forEach((action) => {
                     if (
+                      action?.dataElement?.id &&
                       _.find(
-                        _.find(userTemplate.programstages, {
-                          id: variable?.programStage?.id,
-                        })?.dataelements,
+                        userTemplate.programstages[stageIndex]?.dataelements,
                         { dataElementId: action?.dataElement?.id }
                       )
                     ) {
                       let objHolder = {};
-                      objHolder["childdataelementname"] = _.find(
-                        _.find(userTemplate?.programstages, {
-                          id: variable?.programStage?.id,
-                        })?.dataelements,
+                      const childElement = _.find(
+                        userTemplate.programstages[stageIndex]?.dataelements,
                         { dataElementId: action?.dataElement?.id }
-                      )?.name;
+                      );
+                      objHolder["childdataelementname"] = childElement?.name;
                       objHolder["actionId"] = action.id;
                       objHolder["dataElementId"] = action?.dataElement?.id;
                       temp["dependentdataelementnames"].push(objHolder);
 
+                      // ✅ FIX: Match by dataElementId, NOT name
                       let childIndex = _.findIndex(
-                        userTemplate?.programstages[stageIndex]?.dataelements,
-                        { name: objHolder?.childdataelementname }
+                        userTemplate.programstages[stageIndex]?.dataelements,
+                        { dataElementId: action?.dataElement?.id }
                       );
-                      userTemplate.programstages[stageIndex].dataelements[
-                        childIndex
-                      ]["parentQuestion"] = parentIndex;
-                      userTemplate.programstages[stageIndex].dataelements[
-                        childIndex
-                      ]["dependentValue"] = temp.matchingvalue;
+
+                      if (childIndex !== -1 && parentIndex !== -1) {
+                        console.log("Setting parentQuestion for child:", {
+                          childName: childElement?.name,
+                          childIndex,
+                          parentIndex,
+                          dependentValue: temp.matchingvalue
+                        });
+                        userTemplate.programstages[stageIndex].dataelements[
+                          childIndex
+                        ]["parentQuestion"] = parentIndex;
+                        userTemplate.programstages[stageIndex].dataelements[
+                          childIndex
+                        ]["dependentValue"] = temp.matchingvalue;
+                      } else {
+                        console.warn("Could not set parentQuestion:", {
+                          childIndex,
+                          parentIndex,
+                          childName: childElement?.name
+                        });
+                      }
                     }
                   });
                 }
-              });
+              }
+            });
+
+            if (hasValidRule && temp.dependentdataelementnames.length > 0) {
               stageDependentArray.push(temp);
-            } else if (
-              variable.programRuleVariableSourceType == "TEI_ATTRIBUTE"
-            ) {
-              let temp = {};
-              temp["dependentdataelementnames"] = [];
-              programRules.map((rule) => {
-                if (
-                  rule.condition &&
-                  rule.condition.includes("!=") &&
-                  rule.condition.match(/\{(.*?)\}/)[1] == variable.displayName
-                ) {
+            }
+          } else if (
+            variable.programRuleVariableSourceType == "TEI_ATTRIBUTE"
+          ) {
+            let temp = {};
+            temp["dependentdataelementnames"] = [];
+            let hasValidRule = false;
+
+            programRules.forEach((rule) => {
+              if (rule.condition && rule.condition.includes("!=")) {
+                const match = rule.condition.match(/\{(.*?)\}/);
+                if (match && match[1] == variable.displayName) {
+                  hasValidRule = true;
                   temp["variableId"] = variable.id;
                   temp["dataelementname"] = variable.displayName.split("_")[1];
                   temp["ruleId"] = rule.id;
-                  console.log(rule.condition.split("!= ")[1]);
                   temp["matchingvalue"] = rule.condition
                     .split("!= ")[1]
                     .replaceAll("'", "");
 
+                  // ✅ FIX: Match by trackedEntityAttributeId
                   let parentIndex = _.findIndex(
                     userTemplate.trackedentityattributes,
-                    { name: temp.dataelementname }
+                    { trackedEntityAttributeId: variable.trackedEntityAttribute.id }
                   );
-                  rule.programRuleActions.map((action) => {
+
+                  rule.programRuleActions.forEach((action) => {
                     if (
+                      action?.trackedEntityAttribute?.id &&
                       _.find(userTemplate.trackedentityattributes, {
                         trackedEntityAttributeId: action.trackedEntityAttribute.id,
                       })
                     ) {
                       let objHolder = {};
-                      objHolder["childdataelementname"] = _.find(
+                      const childAttr = _.find(
                         userTemplate.trackedentityattributes,
                         {
                           trackedEntityAttributeId: action.trackedEntityAttribute.id,
                         }
-                      ).name;
+                      );
+                      objHolder["childdataelementname"] = childAttr?.name;
+
                       let childIndex = _.findIndex(
                         userTemplate.trackedentityattributes,
-                        { name: objHolder.childdataelementname }
+                        { trackedEntityAttributeId: action.trackedEntityAttribute.id }
                       );
+
                       objHolder["actionId"] = action.id;
                       temp["dependentdataelementnames"].push(objHolder);
 
-                      userTemplate.trackedentityattributes[childIndex][
-                        "parentQuestion"
-                      ] = parentIndex;
-                      userTemplate.trackedentityattributes[childIndex][
-                        "dependentValue"
-                      ] = temp.matchingvalue;
+                      if (childIndex !== -1 && parentIndex !== -1) {
+                        userTemplate.trackedentityattributes[childIndex][
+                          "parentQuestion"
+                        ] = parentIndex;
+                        userTemplate.trackedentityattributes[childIndex][
+                          "dependentValue"
+                        ] = temp.matchingvalue;
+                      }
                     }
                   });
                 }
-              });
+              }
+            });
+
+            if (hasValidRule && temp.dependentdataelementnames.length > 0) {
               attributedependentquestions.push(temp);
             }
           }
-          // _.find(userTemplate.trackedentityattributes,[])
-        });
-        userTemplate.programstages.map((stage) => {
-          let tempArray = [];
-          let datelementHolder = stage.dataelements;
-          stage.dataelements.map((element) => {
-            if (element.type == "boolean") {
-              API.get(
-                "dataElementGroups?filter=identifiable:token:" +
-                element.dhisname +
-                "&paging=false&fields=id,name,dataElements[id,displayName~rename(code),formName~rename(name)]"
-              ).then((res) => {
-                if (res.data.dataElementGroups.length > 0 && _.findWhere(res.data.dataElementGroups, { name: element.dhisname })) {
-                  // console.log(res.data.dataElementGroups)
-                  // stage.dataelements
-                  let currentGroup = _.findWhere(res.data.dataElementGroups, { name: element.dhisname })
+        }
+      });
+
+      // STEP 2: Process checkboxes
+      const checkboxPromises = [];
+
+      userTemplate.programstages.forEach((stage) => {
+        stage.dataelements.forEach((element) => {
+          if (element.type == "boolean") {
+            const promise = API.get(
+              "dataElementGroups?filter=identifiable:token:" +
+              element.dhisname +
+              "&paging=false&fields=id,name,dataElements[id,displayName~rename(code),formName~rename(name)]"
+            ).then((res) => {
+              if (res.data.dataElementGroups.length > 0) {
+                let currentGroup = _.findWhere(res.data.dataElementGroups, { name: element.dhisname });
+
+                if (currentGroup) {
                   element.attributeRefType = "checkbox";
                   element.type = "checkbox";
                   element.groupid = currentGroup.id;
@@ -2046,30 +2182,61 @@ const handleMenuCheckboxChange = (menuKey, role) => {
                       return elemgrp.name;
                     }
                   );
+
                   let checkboxvalues = [];
-                  currentGroup.dataElements.map((el) => {
-                    datelementHolder.map((ell) => {
-                      if (ell.dataElementId == el.id) checkboxvalues.push(ell);
+
+                  // ✅ NEW: Mark all checkbox option dataElements as hidden
+                  currentGroup.dataElements.forEach((el) => {
+                    stage.dataelements.forEach((ell) => {
+                      if (ell.dataElementId == el.id) {
+                        // Mark this as a checkbox option (not a standalone question)
+                        ell.isCheckboxOption = true;
+                        ell.parentCheckboxId = element.dataElementId;
+                        checkboxvalues.push(ell);
+                      }
                     });
                   });
-                  console.log(checkboxvalues);
+
+                  console.log("Processed checkbox:", element.dhisname);
                   element.options = checkboxvalues;
-                  tempArray.push(element);
                 }
-              });
-            } else {
-              tempArray.push(element);
-            }
-          });
-          stage.dataelements = tempArray;
+              }
+            }).catch(err => {
+              console.error("Error fetching checkbox for " + element.dhisname, err);
+            });
+
+            checkboxPromises.push(promise);
+          }
         });
-        userTemplate["attributedependentquestions"] =
-          attributedependentquestions;
-        userTemplate["stageDependentArray"] = stageDependentArray;
-        dispatch(setUserTemplate(userTemplate));
-        dispatch(setActiveTab('step1'))
       });
-    });
+
+      // STEP 3: Wait for all checkboxes to load
+      console.log("Waiting for " + checkboxPromises.length + " checkbox groups...");
+      await Promise.all(checkboxPromises);
+      console.log("All checkboxes loaded");
+
+      // STEP 4: Assign to userTemplate and dispatch
+      userTemplate["attributedependentquestions"] = attributedependentquestions;
+      userTemplate["stageDependentArray"] = stageDependentArray;
+
+      console.log("Final data:", {
+        stages: userTemplate.programstages?.length,
+        stageDependencies: stageDependentArray.length,
+        attributeDependencies: attributedependentquestions.length
+      });
+
+      dispatch(setUserTemplate(userTemplate));
+      dispatch(setActiveTab("step1"));
+
+      console.log("getDependency completed");
+    } catch (error) {
+      console.error("Error in getDependency:", error);
+      // Still dispatch even on error
+      userTemplate["attributedependentquestions"] = attributedependentquestions;
+      userTemplate["stageDependentArray"] = stageDependentArray;
+      dispatch(setUserTemplate(userTemplate));
+      dispatch(setActiveTab("step1"));
+    }
   };
 
   const validateSortOrders = () => {
