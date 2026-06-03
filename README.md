@@ -72,6 +72,16 @@ String auth = "Basic " + Base64.getEncoder()
 
 ---
 
+# This is to fix the special character problem(CORS Issue)
+# Update the tomcat server.xml with the following:
+<Connector port="8080"
+           protocol="HTTP/1.1"
+           connectionTimeout="20000"
+           redirectPort="8443"
+           URIEncoding="UTF-8"
+           relaxedQueryChars="[]|{}^`\"
+           relaxedPathChars="[]|{}^`\" />
+
 # Add below code on dfis.conf file 
 # Custom config for Email Server 
 # smtp/sendgrid {use any one}
