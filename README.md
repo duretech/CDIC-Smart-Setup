@@ -29,7 +29,7 @@ export const appApiUrl = "https://YOUR_SERVER_URL/service/api/";
 export const basicAuthToken = "Basic YOUR_BASIC_AUTH_KEY";
 ```
 
-> Replace `YOUR_BASIC_AUTH_KEY` with your **own Base64-encoded key** during development and deployment.
+> Replace `YOUR_BASIC_AUTH_KEY` with your **own Base64-encoded key** during development and deployment, or use Basic YWRtaW46VGVzdEAxMjM= (default credentials: admin / Test@123) during development and testing.
 
 ---
 
@@ -71,37 +71,6 @@ String auth = "Basic " + Base64.getEncoder()
 ```
 
 ---
-
-# This is to fix the special character problem(CORS Issue)
-# Update the tomcat server.xml with the following:
-&lt;Connector port="8080"
-           protocol="HTTP/1.1"
-           connectionTimeout="20000"
-           redirectPort="8443"
-           URIEncoding="UTF-8"
-           relaxedQueryChars="[]|{}^`\"
-           relaxedPathChars="[]|{}^`\" /&gt;
-
-# Add below code on dfis.conf file 
-# Custom config for Email Server 
-# smtp/sendgrid {use any one}
- 
-dure.email.config=smtp 
-dure.email.sendgridkey = {sendgrid key}
- 
-dure.smtp.port = {smtp port}
-dure.smtp.server = {smtp server}
-dure.smtp.username = {smtp username}
-dure.smtp.password = {smtp password}
- 
-# For Example
-dure.email.config=smtp 
-dure.email.sendgridkey=sgkey 
-
-dure.smtp.port=443 
-dure.smtp.server=cdic.imonitorplus.com 
-dure.smtp.username=username 
-dure.smtp.password=password
 
 ## 📁 Deployment Folder (basename)
 
