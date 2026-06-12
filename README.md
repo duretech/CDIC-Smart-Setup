@@ -78,23 +78,8 @@ The `basename` defines the deployment folder name.
 
 Deployment URL:
 ```
-https://YOUR_SERVER_URL/cdicv2
+https://YOUR_SERVER_URL/smartsetupv2
 ```
-
----
-
-## 🖼 Media Folder Setup
-
-Create a media folder at:
-```
-https://YOUR_SERVER_URL/media
-```
-
-Required files:
-- logo.png
-- landingpage.png
-
----
 
 ## ▶️ Deployment Steps
 
@@ -103,15 +88,15 @@ Required files:
 npm run build
 ```
 
-2. Create folder `cdicv2` on server
+2. Create folder `smartsetupv2` on server
 
 3. Copy build ZIP into folder
 
-4. Extract ZIP inside `cdicv2`
+4. Extract ZIP inside `smartsetupv2`
 
 5. Verify URL
 ```
-https://YOUR_SERVER_URL/cdicv2
+https://YOUR_SERVER_URL/smartsetupv2
 ```
 
 ---
