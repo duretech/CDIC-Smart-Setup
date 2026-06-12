@@ -59,7 +59,10 @@ Basic YOUR_BASIC_AUTH_KEY
 const username = "admin";
 const password = "Test@123";
 const auth = "Basic " + btoa(username + ":" + password);
+
+console.log(auth);
 ```
+#Copy the auth value from console and use it as Authorization header
 
 ### Java
 ```java
@@ -68,9 +71,12 @@ String password = "Test@123";
 
 String auth = "Basic " + Base64.getEncoder()
     .encodeToString((username + ":" + password).getBytes());
-```
 
+System.out.println(auth);
+```
+#Copy the auth value from console and use it as Authorization header
 ---
+
 
 ## 📁 Deployment Folder (basename)
 
