@@ -26,10 +26,10 @@ src/config/appConfig.js
 ```js
 export const appBaseUrl = "https://YOUR_SERVER_URL/";
 export const appApiUrl = "https://YOUR_SERVER_URL/service/api/";
-export const basicAuthToken = "Basic YOUR_BASIC_AUTH_KEY";
+export const basicAuthToken = "YOUR_BASIC_AUTH_KEY";
 ```
 
-> Replace `YOUR_BASIC_AUTH_KEY` with your **own Base64-encoded key** during development and deployment, or use Basic YWRtaW46VGVzdEAxMjM= (default credentials: admin / Test@123) during development and testing.
+> Replace `YOUR_BASIC_AUTH_KEY` with your **own Base64-encoded key** during development and deployment.
 
 ---
 
