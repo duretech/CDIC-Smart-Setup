@@ -175,7 +175,7 @@ const Home = () => {
                   if (match && match[1] == variable.displayName) {
                     hasValidRule = true;
                     temp["variableName"] = variable.displayName;
-                    temp["dataElementId"] = variable.dataElement.id;
+                    temp["dataElementId"] = variable?.dataElement?.id;
                     temp["variableId"] = variable.id;
                     temp["dataelementname"] = variable?.dataElement?.name.includes("_") ? variable?.dataElement?.name.split("_")[1] : variable?.dataElement?.name; //variable.displayName.split("_")[1] //
                     temp["ruleId"] = rule.id;
