@@ -1963,3 +1963,35 @@ input:checked + .slider:before {
 /* .right:not(.show) {
   display: none;
 } */
+
+.reset-password .modal-body, .reset-password .modal-header, .reset-password .modal-title{
+  background-color: #fff !important;
+  color: #000 !important;
+}
+
+.reset-password .modal-body button{
+  margin: 10px 0px;
+}
+
+.reset-password .modal-header{
+  border-bottom: 1px solid #ccc;
+}
+
+.reset-password .modal-body{
+  margin: 15px;
+}
+
+.my-custom-swal .swal-button--confirm, .my-custom-swal .swal-button--verify, .my-custom-swal .swal-button--resend{
+  background-color: #001965 !important;
+}
+
+.my-custom-swal .swal-button--cancel{
+  background-color: #e6553f !important;
+  color: #fff;
+}
+
+.my-custom-swal .swal-footer{
+  text-align: center;
+  margin-top: 0px !important;
+  padding-top: 5px !important;
+}

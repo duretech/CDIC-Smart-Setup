@@ -15,7 +15,7 @@ import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useHistory } from "react-router-dom";
 import swal from "sweetalert";
-import { loginApi, multipartPostCall } from "../util";
+import { loginApi, multipartPostCall, sendTokenAPI, validateTokenAPI,updatePasswordAPI } from "../util";
 import {
   setUser,
   setLoader,
@@ -34,6 +34,7 @@ import oldformat from "../assets/data/oldFormat.json";
 import newformat from "../assets/data/newFormat.json";
 import axios from "axios";
 import { apiUrl } from "../util/urls";
+import { decryptData, encryptData } from "../component/AesEnc.js";
 
 const Home = () => {
   const [showModal, setShowModal] = useState(false);
@@ -55,6 +56,8 @@ const Home = () => {
   const resetSchema = Yup.object().shape({
     email: Yup.string().email("Invalid email").required("Username is required"),
   });
+
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()])[a-zA-Z\d!@#$%^&*()]{8,}$/;
 
   const history = useHistory();
   const dispatch = useDispatch();
@@ -560,6 +563,379 @@ const Home = () => {
     // localStorage.clear();
     dispatch(setLoader(false));
   }, []);
+
+  // Forgot password functionality
+  function openForgotPasswordPopup() {
+  swal({
+    title: "Forgot Password",
+    text: "Please enter your username to reset your password",
+    content: "input",
+    buttons: ["Cancel", "Continue"],
+    className: "my-custom-swal",
+    icon: "info",
+    closeOnClickOutside: false,
+  }).then((username) => {
+    if (username === null) {
+      // User clicked Cancel, do nothing
+      return;
+    }
+    
+    if (username && username.trim()) {
+      validateUsername(username.trim());
+    } else {
+      // Show error if Continue clicked without input
+      swal({
+        title: "Username Required",
+        text: "Please enter your username to continue.",
+        icon: "warning",
+        className:"my-custom-swal",
+        button: "OK",
+      }).then(() => {
+        openForgotPasswordPopup(); // Show the popup again
+      });
+    }
+  });
+}
+
+
+
+// Step 1: Validate username and send token
+function validateUsername(username) {
+  const requestBody = {
+    status: "1",
+    username,
+    userrole: "",
+    userid: ""
+  };
+
+  //setLoading(true);
+
+  sendTokenAPI(requestBody)
+    .then((res) => {
+      //setLoading(false);
+      if (res.status === "success") {
+        swal({
+          title: "Token Required",
+          text: "Please enter the verification token you received via your registered email.",
+          icon: "warning",
+          className:"my-custom-swal",
+          button: "OK"
+        }).then(() => openTokenVerificationModal(username));
+      } else if(res.message === "service unavailable") {
+        showInvalidUsernameAlert();
+      }
+      else {
+        showMissingEmailAlert();
+      }
+    })
+    .catch((err) => {
+      //setLoading(false);
+      console.error("Error validating username:", err);
+      showErrorAlert(err, "Failed to validate username.");
+    });
+}
+
+// Step 2: Send token to email
+function sendTokenToEmail(username) {
+ const requestBody = {
+    status: "1",
+    username,
+    userrole: "",
+    userid: ""
+  };
+
+  //setLoading(true);
+
+  sendTokenAPI(requestBody)
+    .then((res) => {
+      //setLoading(false);
+      if (res.status === "success") {
+        swal({
+          title: "Token Sent!",
+          text: "A verification token has been sent to your email address.",
+          icon: "success",
+          button: "Continue"
+        }).then(() => openTokenVerificationModal(username));
+      } else {
+        showTokenFailureAlert();
+      }
+    })
+    .catch((err) => {
+      //setLoading(false);
+      showErrorAlert(err, "Failed to send token.");
+    });
+}
+
+// Step 3: Token verification modal
+function openTokenVerificationModal(username) {
+swal({
+  title: "Enter Verification Token",
+  content: {
+    element: "input",
+    attributes: {
+      placeholder: "Enter token here",
+      type: "text",
+    },
+  },
+  buttons: {
+    cancel: "Cancel",
+    resend: { text: "Resend", value: "resend" },
+    verify: { text: "Verify", value: "verify" },
+  },
+  className:"my-custom-swal",
+  closeOnClickOutside: false,
+}).then((value) => {
+    const tokenInput = document.querySelector('.swal-content input');
+    const token = tokenInput?.value.trim();
+
+    if (value === "resend") {
+      sendTokenToEmail(username);
+    } else if (value === "verify") {
+      if (token) {
+        verifyTokenAndShowPasswordModal(username, token);
+      } else {
+        swal({
+          title: "Token Required",
+          text: "Please enter the verification token.",
+          icon: "warning",
+          button: "OK"
+        }).then(() => openTokenVerificationModal(username));
+      }
+    }
+  });
+
+}
+
+// Step 4: Verify token and show password modal
+function verifyTokenAndShowPasswordModal(username, token) {
+  //setLoading(true);
+
+  validateTokenAPI({ username, token })
+    .then((res) => {
+      const response = decryptData(res);
+      //setLoading(false);
+
+      if (response.status === "success") {
+        swal({
+          title: "Token Validated!",
+          text: "Please set a new password.",
+          icon: "success",
+          className:"my-custom-swal",
+          button: "Continue"
+        }).then(() => openNewPasswordModal(username, token));
+      } else {
+        swal({
+          title: "Invalid Token",
+          text: "The token is invalid. Please try again.",
+          icon: "error",
+          className:"my-custom-swal",
+          button: "Retry"
+        }).then(() => openTokenVerificationModal(username));
+      }
+    })
+    .catch((err) => {
+      //setLoading(false);
+      showErrorAlert(err, "Token validation failed.");
+    });
+}
+
+// Step 5: Show new password modal
+function openNewPasswordModal(username, token) {
+
+  // Exact SVG paths from Font Awesome Free Regular (far fa-eye / far fa-eye-slash)
+  const eyeOpenSVG1 = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="18" fill="#888">
+      <path d="M288 144a144 144 0 1 0 144 144A144 144 0 0 0 288 144zm0 240a96 96 0 1 1 96-96 96 96 0 0 1-96 96zm0-160a64 64 0 1 0 64 64 64 64 0 0 0-64-64zm284.52 36.58C518.29 135.59 410.93 64 288 64S57.68 135.64 3.48 260.58a31.94 31.94 0 0 0 0 22.84C57.71 376.41 165.07 448 288 448s230.32-71.64 284.52-196.58a31.94 31.94 0 0 0 0-22.84zM288 400c-98.65 0-189.09-55-237.93-144C98.91 167 189.34 112 288 112s189.09 55 237.93 144C477.1 345 386.66 400 288 400z"/>
+    </svg>`;
+
+  const eyeOffSVG1 = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" width="18" height="18" fill="#888">
+      <path d="M634 471L36 3.51A16 16 0 0 0 13.51 6l-10 12.49A16 16 0 0 0 6 41l598 467.49a16 16 0 0 0 22.49-2.49l10-12.49A16 16 0 0 0 634 471zM296.79 146.47l134.79 105.38C429 240.39 416 224 416 204a96 96 0 0 0-96-96 95.94 95.94 0 0 0-23.21 38.47zm-37.56 55.44L123.45 96.42C176.29 63.07 228.88 48 320 48c117.54 0 221.53 64.55 278.71 144.4a31.91 31.91 0 0 1 0 22.92c-16.75 27.73-42.21 57.3-74.09 82.43l-59.47-46.47C468 239.7 470 230 470 220c0-72.79-55-132.38-125.07-139.67a95.93 95.93 0 0 0-85.7 121.58zM320 464c-117.54 0-221.53-64.55-278.71-144.4a31.91 31.91 0 0 1 0-22.92c16.47-27.28 41.43-56.44 72.77-81.45l-43.77-34.2C27.77 209.73 3 240.49 3 256c0 1 .17 2 .21 2.94C57 376.52 164.06 448 320 448a372.34 372.34 0 0 0 74.19-7.67l-54-42.19A95.83 95.83 0 0 1 320 400a96 96 0 0 1-96-96 95.82 95.82 0 0 1 1.22-15.11l-50.77-39.7A163.32 163.32 0 0 0 172 268a148.23 148.23 0 0 0 148 148 147.52 147.52 0 0 0 62.22-13.89l-62.22-48.64z"/>
+    </svg>`;
+
+  const eyeOpenSVG = '<i class="fas fa-eye"></i>';
+  const eyeOffSVG = '<i class="fas fa-eye-slash"></i>';
+
+  const passwordForm = document.createElement('div');
+  passwordForm.innerHTML = `
+    <div style="text-align: left; margin-top: 15px;">
+
+      <label style="font-weight: bold;">Username:</label>
+      <input type="text" value="${username}" disabled
+        style="width: 95%; margin-bottom: 15px; border: none; background-color: #f2f2f2;
+               padding: 10px; font-size: 14px; box-sizing: border-box;" />
+
+      <label style="font-weight: bold;">New Password:</label>
+      <div style="position: relative; margin-bottom: 15px; width: 95%;">
+        <input type="password" id="newPassword" placeholder="Enter new password"
+          style="width: 100%; border: none; background-color: #f9f9f9;
+                 padding: 10px 40px 10px 10px; font-size: 14px; box-sizing: border-box;" />
+        <button type="button" id="toggleNewPassword"
+          style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+                 background: none; border: none; cursor: pointer; padding: 0;
+                 display: flex; align-items: center;">
+          <span id="eyeIconNew"></span>
+        </button>
+      </div>
+
+      <label style="font-weight: bold;">Confirm Password:</label>
+      <div style="position: relative; margin-bottom: 5px; width: 95%;">
+        <input type="password" id="confirmPassword" placeholder="Confirm new password"
+          style="width: 100%; border: none; background-color: #f9f9f9;
+                 padding: 10px 40px 10px 10px; font-size: 14px; box-sizing: border-box;" />
+        <button type="button" id="toggleConfirmPassword"
+          style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+                 background: none; border: none; cursor: pointer; padding: 0;
+                 display: flex; align-items: center;">
+          <span id="eyeIconConfirm"></span>
+        </button>
+      </div>
+
+      <div style="font-size: 12px; color: #666; margin-top: 5px; margin-bottom: 10px;">
+        Password must contain at least 8 characters, 1 lowercase, 1 uppercase, 1 number, and 1 symbol.
+      </div>
+    </div>
+  `;
+
+  // Set initial icons (hidden state = eyeOff)
+  passwordForm.querySelector('#eyeIconNew').innerHTML = eyeOffSVG;
+  passwordForm.querySelector('#eyeIconConfirm').innerHTML = eyeOffSVG;
+
+  // Toggle New Password
+  passwordForm.querySelector('#toggleNewPassword').addEventListener('click', function () {
+    const input = passwordForm.querySelector('#newPassword');
+    const icon = passwordForm.querySelector('#eyeIconNew');
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    icon.innerHTML = isHidden ? eyeOpenSVG : eyeOffSVG;
+  });
+
+  // Toggle Confirm Password
+  passwordForm.querySelector('#toggleConfirmPassword').addEventListener('click', function () {
+    const input = passwordForm.querySelector('#confirmPassword');
+    const icon = passwordForm.querySelector('#eyeIconConfirm');
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    icon.innerHTML = isHidden ? eyeOpenSVG : eyeOffSVG;
+  });
+
+  swal({
+    title: "Set New Password",
+    content: passwordForm,
+    buttons: {
+      cancel: "Cancel",
+      confirm: { text: "Update Password", value: "update" },
+    },
+    icon: "info",
+    className:"my-custom-swal",
+    closeOnClickOutside: false
+  }).then((result) => {
+    if (result === "update") {
+      const newPassword = document.getElementById('newPassword').value.trim();
+      const confirmPassword = document.getElementById('confirmPassword').value.trim();
+
+      if (!newPassword || !confirmPassword) {
+        return showSimpleAlert("Missing Information", "Please fill in both password fields.", "warning", () =>
+          openNewPasswordModal(username, token));
+      }
+
+      if (newPassword !== confirmPassword) {
+        return showSimpleAlert("Password Mismatch", "Passwords do not match.", "error", () =>
+          openNewPasswordModal(username, token));
+      }
+
+      if (!passwordRegex.test(newPassword)) {
+        return showSimpleAlert(
+          "Invalid Password",
+          "Password must contain at least 8 characters, including 1 lowercase, 1 uppercase, 1 number, and 1 special character.",
+          "warning",
+          () => openNewPasswordModal(username, token)
+        );
+      }
+
+      updatePassword(username, newPassword, token);
+    } else {
+      swal.close();
+    }
+  });
+}
+
+// Step 6: Update password
+function updatePassword(email, password, token) {
+  //setLoading(true);
+
+  updatePasswordAPI({ email, password })
+    .then(() => {
+      //setLoading(false);
+      swal({
+        title: "Password Updated!",
+        text: "Your password has been successfully updated.",
+        icon: "success",
+        button: "Ok"
+      }).then(() => {
+        swal.close(); // Or redirect
+      });
+    })
+    .catch((err) => {
+      //setLoading(false);
+      swal({
+        title: "Update Failed",
+        text: err.response?.data?.message || "Failed to update password.",
+        icon: "error",
+        buttons: {
+          retry: { text: "Try Again", value: "retry" },
+          cancel: { text: "Cancel", value: null }
+        }
+      }).then((result) => {
+        if (result === "retry") {
+          verifyTokenAndShowPasswordModal(email, token);
+        }
+      });
+    });
+}
+
+function showSimpleAlert(title, text, icon, callback) {
+  swal({ title, text, icon, button: "OK" }).then(callback);
+}
+
+function showErrorAlert(err, fallbackMsg) {
+  swal({
+    title: "Error",
+    text: err.response?.data?.message || fallbackMsg,
+    icon: "error",
+    button: "Try Again"
+  }).then(() => openForgotPasswordPopup());
+}
+
+function showInvalidUsernameAlert() {
+  swal({
+    title: "Invalid Username",
+    text: "The username you entered is not valid. Please check and try again.",
+    icon: "error",
+    className:"my-custom-swal",
+    button: "Try Again"
+  }).then(() => openForgotPasswordPopup());
+}
+
+function showMissingEmailAlert() {
+  swal({
+    title: "Email Not Found",
+    text: "No email found with this username. Please check and try again.",
+    icon: "error",
+    button: "Try Again"
+  }).then(() => openForgotPasswordPopup());
+}
+
+function showTokenFailureAlert() {
+  swal({
+    title: "Token Error",
+    text: "Failed to send verification token. Please try again.",
+    icon: "error",
+    button: "Retry"
+  }).then(() => openForgotPasswordPopup());
+}
+
+
   return (
     <div>
       <Toaster
@@ -738,7 +1114,8 @@ const Home = () => {
                 <div>
                   <p
                     className="forgotbtn"
-                    onClick={() => setShowModal(true)}
+                    //onClick={() => setShowModal(true)}
+                    onClick={() => openForgotPasswordPopup()}
                     type="button"
                   >
                     Forgot Password

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { apiUrl } from "./urls";
+import { basicAuthToken } from "../config/appConfig";
 
 const instance = axios.create({
   baseURL: apiUrl,
@@ -99,4 +100,46 @@ export const activate = (param,values) => {
     return res;
   });
 };
+
+export const sendTokenAPI = (param) => {
+    let subURL = `save/mfa/user/sendToken`
+    let url = `${apiUrl}${subURL}`
+
+   return axios({
+        method: 'POST',
+        url: `${url}`,
+        headers: { Authorization: 'Basic '+basicAuthToken },
+        data: param
+    }).then((response => {
+        return response.data
+    }))
+}
+
+export const validateTokenAPI = (param) => {
+    let subURL = `save/mfa/user/validate/token`
+    let url = `${apiUrl}${subURL}`
+
+   return axios({
+        method: 'POST',
+        url: `${url}`,
+        headers: { Authorization: 'Basic '+basicAuthToken },
+        data: param
+    }).then((response => {
+        return response.data
+    }))
+}
+
+export const updatePasswordAPI = (param) => {
+    let subURL = `rtmpro/subscribe/updatePassword`
+    let url = `${apiUrl}${subURL}`
+
+   return axios({
+        method: 'POST',
+        url: `${url}`,
+        headers: { Authorization: 'Basic '+basicAuthToken },
+        data: param
+    }).then((response => {
+        return response.data
+    }))
+}
 export default instance;
